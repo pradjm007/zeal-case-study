@@ -1,0 +1,239 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "Telemetry QoS Dashboard",
+  "uid": "telemetry-main",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"],
+    "time_options": ["5m", "15m", "30m", "1h", "3h", "6h", "12h", "24h", "2d", "7d"]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Events per minute",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(toDateTime(timestamp / 1000)) AS minute, COUNT(*) AS events FROM telemetry_events WHERE $__timeFilter(toDateTime(timestamp / 1000)) GROUP BY minute ORDER BY minute",
+          "format": 0,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Average Bitrate over time (kbps)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kbps",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(toDateTime(timestamp / 1000)) AS minute, AVG(bitrate) AS avg_bitrate_kbps FROM telemetry_events WHERE $__timeFilter(toDateTime(timestamp / 1000)) AND bitrate > 0 GROUP BY minute ORDER BY minute",
+          "format": 0,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Total Events",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 6 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS total FROM telemetry_events WHERE $__timeFilter(toDateTime(timestamp / 1000))",
+          "format": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Active Users",
+      "description": "Unique viewers with a HEARTBEAT event in the selected time range",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 6 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 200 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(DISTINCT viewer_id) AS active_users FROM telemetry_events WHERE event_type = 'HEARTBEAT' AND $__timeFilter(toDateTime(timestamp / 1000))",
+          "format": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Average Buffer Duration (ms)",
+      "description": "Mean buffer stall duration from buffer_durations table",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 6 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 2000 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT AVG(duration_ms) AS avg_buffer_ms FROM buffer_durations WHERE $__timeFilter(calculated_at)",
+          "format": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Buffer Stall Count",
+      "description": "Number of buffer stall events in selected time range",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 6 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS buffer_stalls FROM buffer_durations WHERE $__timeFilter(calculated_at)",
+          "format": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Buffer Duration over time (ms)",
+      "description": "Average buffer stall duration per minute",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(calculated_at) AS minute, AVG(duration_ms) AS avg_buffer_ms FROM buffer_durations WHERE $__timeFilter(calculated_at) GROUP BY minute ORDER BY minute",
+          "format": 0,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Avg Buffer Timeout Elapsed (ms) over time",
+      "description": "How long sessions were stuck before timing out",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(recorded_at) AS minute, AVG(elapsed_ms) AS avg_elapsed_ms FROM buffer_timeouts WHERE $__timeFilter(recorded_at) GROUP BY minute ORDER BY minute",
+          "format": 0,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Avg Bitrate per User (kbps)",
+      "description": "Average bitrate consumed per viewer in the selected time range",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": { "unit": "kbps" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "avg_bitrate_kbps" },
+            "properties": [
+              { "id": "displayName", "value": "Avg Bitrate (kbps)" },
+              { "id": "unit", "value": "kbps" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT viewer_id, ROUND(AVG(bitrate), 2) AS avg_bitrate_kbps FROM telemetry_events WHERE $__timeFilter(toDateTime(timestamp / 1000)) AND bitrate > 0 GROUP BY viewer_id ORDER BY avg_bitrate_kbps DESC",
+          "format": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Avg Bitrate per User over time (kbps)",
+      "description": "Per-user average bitrate trend",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-ds" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kbps",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(toDateTime(timestamp / 1000)) AS minute, viewer_id, AVG(bitrate) AS avg_bitrate_kbps FROM telemetry_events WHERE $__timeFilter(toDateTime(timestamp / 1000)) AND bitrate > 0 GROUP BY minute, viewer_id ORDER BY minute",
+          "format": 0,
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

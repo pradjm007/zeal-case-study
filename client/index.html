@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HLS Player Telemetry</title>
+</head>
+<body>
+  <video id="video" controls width="600"></video>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="telemetry.js"></script>
+
+  <script>
+    const video = document.getElementById('video');
+    const videoSrc = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+
+      window.hls = hls; // expose globally for telemetry
+    }
+  </script>
+</body>
+</html>
